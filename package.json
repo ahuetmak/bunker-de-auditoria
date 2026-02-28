@@ -1,0 +1,27 @@
+{
+  "name": "bunker",
+  "version": "1.0.0",
+  "description": "Orquestador de Auditoría Dual — Hive AI + Sightengine",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "lint": "eslint src/ test/",
+    "lint:fix": "eslint --fix src/ test/",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["audit", "deepfake", "hive", "sightengine", "trust"],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "@eslint/js": "^9.0.0",
+    "globals": "^15.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
