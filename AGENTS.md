@@ -2,17 +2,36 @@
 
 ## Cursor Cloud specific instructions
 
-### Repository state
+### Overview
 
-This repository (`bunker-de-auditoria`) is currently **empty** — it contains only a `README.md` and a Java-oriented `.gitignore`. There is no application code, no build configuration (no `pom.xml`, `build.gradle`, etc.), and no dependency files.
+**Bunker** is a Dual Audit Orchestrator that runs two image-analysis engines in parallel:
+- **Hive AI** — detects AI-generated images / deepfakes
+- **Sightengine** — detects Photoshop manipulation / scam content
 
-### Environment
+The server exposes a simple HTTP API (`/health`, `/audit`).
 
-- **Java 21 JDK** (OpenJDK 21.0.10) is pre-installed on the VM.
-- **No build tool** (Maven/Gradle) is configured because no build file exists in the repo.
-- If a build tool is added in the future, the update script and these instructions should be updated accordingly.
+### Commands
 
-### Development notes
+| Task | Command |
+|------|---------|
+| Install deps | `npm install` |
+| Dev (watch) | `npm run dev` |
+| Start | `npm start` |
+| Lint | `npm run lint` |
+| Tests | `npm test` |
 
-- The `.gitignore` uses a standard Java template, suggesting the project intends to be Java-based.
-- Once source code and a build configuration are added, update this file with lint/test/build/run commands.
+### Environment variables
+
+The server runs without API keys (health endpoint works), but `/audit` returns 503 until these are set in a `.env` file or exported:
+- `HIVE_KEY` — Hive AI API token
+- `SE_USER` — Sightengine user ID
+- `SE_KEY` — Sightengine API key
+
+See `.env.example` for the template.
+
+### Non-obvious notes
+
+- Node.js >= 22 is required (uses native `fetch` and `node --test`).
+- `npm run dev` uses `node --watch` for hot reload — no need for nodemon.
+- Tests use the **Node.js built-in test runner** (`node:test`), not Jest or Vitest.
+- ESLint uses flat config (`eslint.config.js`), not legacy `.eslintrc`.
