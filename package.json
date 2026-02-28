@@ -1,25 +1,24 @@
 {
   "name": "bunker",
   "version": "1.0.0",
-  "description": "Orquestador de Auditoría Dual — Hive AI + Sightengine",
+  "description": "Orquestador de Auditoría Dual — Hive AI + Sightengine (Cloudflare Workers)",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "lint": "eslint src/ test/",
     "lint:fix": "eslint --fix src/ test/",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "tail": "wrangler tail"
   },
-  "keywords": ["audit", "deepfake", "hive", "sightengine", "trust"],
+  "keywords": ["audit", "deepfake", "hive", "sightengine", "trust", "cloudflare-workers"],
   "license": "UNLICENSED",
   "devDependencies": {
+    "wrangler": "^4.0.0",
     "eslint": "^9.0.0",
     "@eslint/js": "^9.0.0",
     "globals": "^15.0.0"
-  },
-  "dependencies": {
-    "dotenv": "^16.4.0"
   },
   "engines": {
     "node": ">=22.0.0"

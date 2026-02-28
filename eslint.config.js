@@ -8,7 +8,13 @@ export default [
       ecmaVersion: 2024,
       sourceType: "module",
       globals: {
-        ...globals.node,
+        ...globals.serviceworker,
+        Response: "readonly",
+        Request: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        fetch: "readonly",
+        console: "readonly",
       },
     },
     rules: {
@@ -17,6 +23,14 @@ export default [
     },
   },
   {
-    ignores: ["node_modules/"],
+    files: ["test/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    ignores: ["node_modules/", ".wrangler/"],
   },
 ];

@@ -1,95 +1,58 @@
-import { describe, it, before, after } from "node:test";
+import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
+import worker from "../src/index.js";
 
-const PORT = 0;
-let server;
-let baseUrl;
+const ENV_EMPTY = {};
+const ENV_FULL = { HIVE_KEY: "test", SE_USER: "test", SE_KEY: "test" };
 
-function handler(req, res) {
-  res.setHeader("Content-Type", "application/json");
-
-  if (req.method === "GET" && req.url === "/health") {
-    res.writeHead(200);
-    res.end(JSON.stringify({ status: "ok" }));
-    return;
+function req(method, path, body) {
+  const url = `https://bunker.test${path}`;
+  const opts = { method };
+  if (body) {
+    opts.body = JSON.stringify(body);
+    opts.headers = { "Content-Type": "application/json" };
   }
-
-  if (req.method === "POST" && req.url === "/audit") {
-    const chunks = [];
-    req.on("data", (c) => chunks.push(c));
-    req.on("end", () => {
-      const body = Buffer.concat(chunks).toString();
-      try {
-        const { imageUrl } = JSON.parse(body);
-        if (!imageUrl) {
-          res.writeHead(400);
-          res.end(JSON.stringify({ error: "imageUrl is required" }));
-          return;
-        }
-        res.writeHead(200);
-        res.end(JSON.stringify({ received: imageUrl }));
-      } catch {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "Invalid JSON" }));
-      }
-    });
-    return;
-  }
-
-  res.writeHead(404);
-  res.end(JSON.stringify({ error: "Not found" }));
+  return new Request(url, opts);
 }
 
-describe("HTTP server", () => {
-  before(() => {
-    return new Promise((resolve) => {
-      server = createServer(handler);
-      server.listen(PORT, () => {
-        const addr = server.address();
-        baseUrl = `http://localhost:${addr.port}`;
-        resolve();
-      });
-    });
-  });
-
-  after(() => {
-    return new Promise((resolve) => {
-      server.close(resolve);
-    });
-  });
-
+describe("Workers handler", () => {
   it("GET /health returns 200 with status ok", async () => {
-    const res = await fetch(`${baseUrl}/health`);
+    const res = await worker.fetch(req("GET", "/health"), ENV_EMPTY);
     assert.equal(res.status, 200);
-    const body = await res.json();
-    assert.equal(body.status, "ok");
+    const data = await res.json();
+    assert.equal(data.status, "ok");
+    assert.equal(data.keysConfigured, false);
+    assert.deepEqual(data.missing, ["HIVE_KEY", "SE_USER", "SE_KEY"]);
+  });
+
+  it("GET /health reports keysConfigured true when all keys present", async () => {
+    const res = await worker.fetch(req("GET", "/health"), ENV_FULL);
+    const data = await res.json();
+    assert.equal(data.keysConfigured, true);
+    assert.deepEqual(data.missing, []);
   });
 
   it("POST /audit returns 400 when imageUrl is missing", async () => {
-    const res = await fetch(`${baseUrl}/audit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const res = await worker.fetch(req("POST", "/audit", {}), ENV_FULL);
     assert.equal(res.status, 400);
-    const body = await res.json();
-    assert.equal(body.error, "imageUrl is required");
+    const data = await res.json();
+    assert.equal(data.error, "imageUrl is required");
   });
 
-  it("POST /audit returns 200 with valid imageUrl", async () => {
-    const res = await fetch(`${baseUrl}/audit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ imageUrl: "https://example.com/image.jpg" }),
-    });
-    assert.equal(res.status, 200);
-    const body = await res.json();
-    assert.equal(body.received, "https://example.com/image.jpg");
+  it("POST /audit returns 503 when API keys are missing", async () => {
+    const res = await worker.fetch(
+      req("POST", "/audit", { imageUrl: "https://example.com/img.jpg" }),
+      ENV_EMPTY,
+    );
+    assert.equal(res.status, 503);
+    const data = await res.json();
+    assert.equal(data.error, "Missing API keys");
   });
 
   it("returns 404 for unknown routes", async () => {
-    const res = await fetch(`${baseUrl}/unknown`);
+    const res = await worker.fetch(req("GET", "/unknown"), ENV_EMPTY);
     assert.equal(res.status, 404);
+    const data = await res.json();
+    assert.equal(data.error, "Not found");
   });
 });

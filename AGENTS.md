@@ -4,34 +4,27 @@
 
 ### Overview
 
-**Bunker** is a Dual Audit Orchestrator that runs two image-analysis engines in parallel:
-- **Hive AI** — detects AI-generated images / deepfakes
-- **Sightengine** — detects Photoshop manipulation / scam content
-
-The server exposes a simple HTTP API (`/health`, `/audit`).
+**Bunker** es un Cloudflare Worker que orquesta auditoría dual de imágenes:
+- **Hive AI** — detecta imágenes generadas por IA / deepfakes
+- **Sightengine** — detecta manipulación con Photoshop / scam
 
 ### Commands
 
 | Task | Command |
 |------|---------|
 | Install deps | `npm install` |
-| Dev (watch) | `npm run dev` |
-| Start | `npm start` |
+| Dev (local workerd) | `npm run dev` |
+| Deploy | `npm run deploy` |
 | Lint | `npm run lint` |
 | Tests | `npm test` |
-
-### Environment variables
-
-The server runs without API keys (health endpoint works), but `/audit` returns 503 until these are set in a `.env` file or exported:
-- `HIVE_KEY` — Hive AI API token
-- `SE_USER` — Sightengine user ID
-- `SE_KEY` — Sightengine API key
-
-See `.env.example` for the template.
+| Prod logs | `npm run tail` |
 
 ### Non-obvious notes
 
-- Node.js >= 22 is required (uses native `fetch` and `node --test`).
-- `npm run dev` uses `node --watch` for hot reload — no need for nodemon.
-- Tests use the **Node.js built-in test runner** (`node:test`), not Jest or Vitest.
-- ESLint uses flat config (`eslint.config.js`), not legacy `.eslintrc`.
+- `wrangler dev` corre el Worker en **workerd** (runtime real de Cloudflare), no Node.js. El servidor local escucha en **puerto 8787**.
+- Las variables secretas locales van en **`.dev.vars`** (no `.env`). Este archivo está en `.gitignore`.
+- Para producción las secrets se configuran con `wrangler secret put <NAME>`.
+- `src/audit.js` usa solo Web APIs (`fetch`, `URL`, `URLSearchParams`) — es 100% compatible con Workers sin polyfills.
+- Los tests corren con `node:test` (built-in), no Jest/Vitest. Importan el handler directamente y lo invocan con `Request`/`Response` estándar.
+- ESLint usa flat config con `globals.serviceworker` para el source y `globals.node` para tests.
+- El deploy requiere autenticación con Cloudflare: `wrangler login` o `CLOUDFLARE_API_TOKEN` env var.

@@ -1,76 +1,50 @@
-import { createServer } from "node:http";
-import { config, validateConfig } from "./config.js";
 import { runAudit } from "./audit.js";
 
-const server = createServer(async (req, res) => {
-  res.setHeader("Content-Type", "application/json");
-
-  if (req.method === "GET" && req.url === "/health") {
-    const { valid, missing } = validateConfig();
-    res.writeHead(200);
-    res.end(JSON.stringify({ status: "ok", keysConfigured: valid, missing }));
-    return;
-  }
-
-  if (req.method === "POST" && req.url === "/audit") {
-    try {
-      const body = await readBody(req);
-      const { imageUrl } = JSON.parse(body);
-
-      if (!imageUrl) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: "imageUrl is required" }));
-        return;
-      }
-
-      const { valid, missing } = validateConfig();
-      if (!valid) {
-        res.writeHead(503);
-        res.end(
-          JSON.stringify({
-            error: "Missing API keys",
-            missing,
-          }),
-        );
-        return;
-      }
-
-      const result = await runAudit(imageUrl, {
-        HIVE_KEY: config.hiveKey,
-        SE_USER: config.seUser,
-        SE_KEY: config.seKey,
-      });
-
-      res.writeHead(200);
-      res.end(JSON.stringify(result));
-    } catch (err) {
-      res.writeHead(500);
-      res.end(JSON.stringify({ error: err.message }));
-    }
-    return;
-  }
-
-  res.writeHead(404);
-  res.end(JSON.stringify({ error: "Not found" }));
-});
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on("data", (chunk) => chunks.push(chunk));
-    req.on("end", () => resolve(Buffer.concat(chunks).toString()));
-    req.on("error", reject);
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
-server.listen(config.port, () => {
-  console.log(`🛡️  Bunker Audit Server running on http://localhost:${config.port}`);
-  console.log(`   Health: GET  /health`);
-  console.log(`   Audit:  POST /audit  { "imageUrl": "..." }`);
+function validateEnv(env) {
+  const missing = [];
+  if (!env.HIVE_KEY) missing.push("HIVE_KEY");
+  if (!env.SE_USER) missing.push("SE_USER");
+  if (!env.SE_KEY) missing.push("SE_KEY");
+  return { valid: missing.length === 0, missing };
+}
 
-  const { valid, missing } = validateConfig();
-  if (!valid) {
-    console.log(`⚠️  Missing API keys: ${missing.join(", ")}`);
-    console.log(`   Set them in .env or as environment variables`);
-  }
-});
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname === "/health") {
+      const { valid, missing } = validateEnv(env);
+      return json({ status: "ok", keysConfigured: valid, missing });
+    }
+
+    if (request.method === "POST" && url.pathname === "/audit") {
+      try {
+        const body = await request.json();
+        const { imageUrl } = body;
+
+        if (!imageUrl) {
+          return json({ error: "imageUrl is required" }, 400);
+        }
+
+        const { valid, missing } = validateEnv(env);
+        if (!valid) {
+          return json({ error: "Missing API keys", missing }, 503);
+        }
+
+        const result = await runAudit(imageUrl, env);
+        return json(result);
+      } catch (err) {
+        return json({ error: err.message }, 500);
+      }
+    }
+
+    return json({ error: "Not found" }, 404);
+  },
+};

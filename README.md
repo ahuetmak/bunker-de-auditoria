@@ -1,6 +1,6 @@
 # Bunker
 
-Orquestador de Auditoría Dual — detecta imágenes generadas por IA y manipulación digital.
+Orquestador de Auditoría Dual en **Cloudflare Workers** — detecta imágenes generadas por IA y manipulación digital.
 
 ## Motores
 
@@ -13,22 +13,34 @@ Orquestador de Auditoría Dual — detecta imágenes generadas por IA y manipula
 
 ```bash
 npm install
-cp .env.example .env   # Completar con tus API keys
-npm run dev
+cp .env.example .dev.vars   # Completar con tus API keys reales
+npm run dev                  # Inicia wrangler dev en http://localhost:8787
+```
+
+## Deploy a Cloudflare
+
+```bash
+# Configurar secrets en producción
+wrangler secret put HIVE_KEY
+wrangler secret put SE_USER
+wrangler secret put SE_KEY
+
+# Deploy
+npm run deploy
 ```
 
 ## API
 
 ### `GET /health`
 
-Verifica el estado del servidor y si las API keys están configuradas.
+Verifica el estado del Worker y si las API keys están configuradas.
 
 ### `POST /audit`
 
 Ejecuta la auditoría dual sobre una imagen.
 
 ```bash
-curl -X POST http://localhost:3000/audit \
+curl -X POST https://bunker.<tu-subdomain>.workers.dev/audit \
   -H "Content-Type: application/json" \
   -d '{"imageUrl": "https://example.com/image.jpg"}'
 ```
@@ -47,16 +59,18 @@ curl -X POST http://localhost:3000/audit \
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run dev` | Servidor con hot-reload |
-| `npm start` | Servidor en producción |
+| `npm run dev` | Worker local con wrangler dev (workerd) |
+| `npm run deploy` | Deploy a Cloudflare Workers |
 | `npm run lint` | Ejecutar ESLint |
 | `npm test` | Ejecutar tests |
+| `npm run tail` | Logs en tiempo real de producción |
 
-## Variables de Entorno
+## Secrets
 
 | Variable | Descripción |
 |----------|-------------|
 | `HIVE_KEY` | Token de API de Hive AI |
 | `SE_USER` | User ID de Sightengine |
 | `SE_KEY` | API Key de Sightengine |
-| `PORT` | Puerto del servidor (default: 3000) |
+
+Local: configura en `.dev.vars`. Producción: `wrangler secret put <NAME>`.

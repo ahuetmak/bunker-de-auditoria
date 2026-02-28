@@ -1,0 +1,8 @@
+name = "bunker"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Secrets (set via `wrangler secret put <NAME>`):
+#   HIVE_KEY   — Hive AI API token
+#   SE_USER    — Sightengine user ID
+#   SE_KEY     — Sightengine API key
